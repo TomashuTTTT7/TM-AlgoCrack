@@ -1,2 +1,2 @@
 # TM-AlgoCrack
- Attempt to analyze and writeup trackmania tricks
+ Various scripts to explore trackmania bugs and tricks based on reverse-engineering game's code.
