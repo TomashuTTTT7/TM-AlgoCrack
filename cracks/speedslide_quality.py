@@ -2,7 +2,7 @@ import speedslide_crack
 import common.geom as geom
 from tminterface.interface import TMInterface
 from tminterface.client import Client, run_client
-import tminterface.sizes
+import tminterface.constants
 import sys
 import struct
 
@@ -18,7 +18,7 @@ class MainClient(Client):
             state = iface.get_simulation_state()
 
             wheels_in_air = True
-            wheel_size = tminterface.sizes.SIMULATION_WHEELS_SIZE // 4
+            wheel_size = tminterface.constants.SIMULATION_WHEELS_SIZE // 4
             for i in range(4):
                 current_offset = wheel_size * i
                 hasgroundcontact = struct.unpack('i', state.simulation_wheels[current_offset+292:current_offset+296])[0]
