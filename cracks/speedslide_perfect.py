@@ -38,6 +38,7 @@ class MainClient(Client):
         self.records = {}
         self.prev = None
         self.iterations = 0
+        self.error = False
 
     def on_registered(self, iface: TMInterface) -> None:
         print(f'Registered to {iface.server_name}')
@@ -45,6 +46,13 @@ class MainClient(Client):
 
     def on_simulation_begin(self, iface: TMInterface):
         iface.remove_state_validation()
+        self.error = False
+        self.state = None
+        self.race_time = 0
+        self.current_step = self.min
+        self.inputs = {}
+        self.prev = None
+        self.iterations = 0
         
     def on_custom_command(self, iface: TMInterface, time_from: int, time_to: int, command: str, args: list):
         if command == 'sd':
@@ -65,6 +73,9 @@ class MainClient(Client):
                 iface.log('[SDCrack] Syntax: sd <time1> <time2>', 'error')
 
     def on_simulation_step(self, iface: TMInterface, _time: int):
+        if self.error:
+            return
+
         self.race_time = _time
         if self.race_time >= 0:
             self.state = iface.get_simulation_state()
@@ -134,27 +145,38 @@ class MainClient(Client):
                 if abs(speed.x) >= speedslide_crack.GetMinimumSpeedslideAbsoluteLocalSpeedXForStadiumCar(speed.z): # speedslide condition
                     target_speedz = speed.z
                     AbsoluteSpeedXFromSpeed = speedslide_crack.GetFuncAbsoluteSpeedXFromSpeedForStadiumCar()
+                    horizontal_speed = geom.GmVec2(speed.x, speed.z)
+                    hslen = horizontal_speed.Length()
+                    max_slope_iter = len(AbsoluteSpeedXFromSpeed.Xs)
+                    slope_iter = 0
                     while True:
+                        if slope_iter >= max_slope_iter:
+                            target_speedz = speed.z
+                            print('[SDCrack] Error: Cannot find optimal speed for speedslide (Exceeded number of iterations)')
+                            self.error = True
+                            break
+
                         a, b = AbsoluteSpeedXFromSpeed.GetSlope(target_speedz)
-                        horizontal_speed = geom.GmVec2(speed.x, speed.z)
-                        len = horizontal_speed.Length()
                         _a = 1 + a*a
                         _b = 2*a*b
-                        _c = b*b - len*len
+                        _c = b*b - hslen*hslen
                         solutions, z1, z2 = geom.SolveQuadratic(_a, _b, _c)
 
                         if solutions > 0:
                             target_speedz = max(z1, z2)
                         else:
+                            print('[SDCrack] Error: Cannot find optimal speed for speedslide (No solutions)')
+                            self.error = True
                             break
 
                         a2, b2 = AbsoluteSpeedXFromSpeed.GetSlope(target_speedz)
                         if a == a2 and b == b2: # check if on the same slope, if not, adjust to different slope
                             break
+                        slope_iter += 1
 
                     if target_speedz != speed.z:
-                        theta1 = math.acos(speed.z/len)
-                        theta2 = math.acos(target_speedz/len)
+                        theta1 = math.acos(speed.z/hslen)
+                        theta2 = math.acos(target_speedz/hslen)
 
                         diff_angle = theta2 - theta1 # It probably does only work for flat surfaces, but works for any speed
                         # the precise equation to make it work always is extremely long and hard to simplify
@@ -196,20 +218,15 @@ class MainClient(Client):
                         
                         self.inputs[self.race_time - time_diff] = new_steer
                         self.iterations += 1
+                else:
+                    print('[SDCrack] Error: Speedslide not found')
+                    self.error = True
 
                 if self.iterations == 1:
                     self.current_step += 10
                     self.iterations = 0
                     print(f'{_time - time_diff - 10} steer {self.inputs[self.race_time - time_diff]}')
                 iface.rewind_to_state(self.prev)
-
-    def on_simulation_end(self, iface, result: int):
-        self.state = None
-        self.race_time = 0
-        self.current_step = self.min
-        self.inputs = {}
-        self.prev = None
-        self.iterations = 0
 
 def isFloat(value) -> bool:
     try:
