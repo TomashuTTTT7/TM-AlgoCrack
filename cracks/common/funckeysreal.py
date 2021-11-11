@@ -54,4 +54,29 @@ class CFuncKeysReal:
                 return self.Ys[rhs] * blend + (1.0 - blend) * self.Ys[lhs]
             else:
                 return 0
+
+    def GetSlope(self, x: float) -> tuple[float, float]:
+        lhs, rhs = self.GetBoundingIndices(x)
+        if lhs == -1:
+            return 0.0, 0.0
+        if lhs == rhs:
+            return 0.0, self.Ys[lhs]
+        lx, ly = self.Xs[lhs], self.Ys[lhs]
+        rx, ry = self.Xs[rhs], self.Ys[rhs]
+        a = (ly - ry)/(lx - rx)
+        b = ly - a*lx
+        return a, b
+
+    def Scale(self, sx: float, sy: float):
+        for i in range(len(self.Xs)):
+            self.Xs[i] /= sx
+        for i in range(len(self.Ys)):
+            self.Ys[i] *= sy
+    
+    def GetInverse(self):
+        inverse = CFuncKeysReal([])
+        inverse.Xs = self.Ys
+        inverse.Ys = self.Xs
+        return inverse
+
                 
