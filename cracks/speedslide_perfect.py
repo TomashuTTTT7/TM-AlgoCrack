@@ -41,16 +41,28 @@ class MainClient(Client):
 
     def on_registered(self, iface: TMInterface) -> None:
         print(f'Registered to {iface.server_name}')
+        iface.register_custom_command('sd')
 
     def on_simulation_begin(self, iface: TMInterface):
         iface.remove_state_validation()
-        iface.register_custom_command('sd')
         
-    def on_custom_command(self, iface: TMInterface, time_from: int, time_to: int, command: str, args: list):
+    def on_custom_command(self, iface: TMInterface, command: str, args: list):
         if command == 'sd':
-            self.min = time_from + 10
-            self.max = time_to + 10
-            self.current_step = self.min
+            if len(args) >= 2:
+                if isFloat(args[0]) and isFloat(args[1]):
+                    time_from = int(args[0]) if not '.' in args[0] else int(float(args[0])*1000)
+                    time_to = int(args[1]) if not '.' in args[1] else int(float(args[1])*1000)
+                    if time_to <= time_from:
+                        iface.log('[SDCrack] The start time must be lower than the end time.', 'error')
+                    else:
+                        self.min = time_from + 10
+                        self.max = time_to + 10
+                        self.current_step = self.min
+                        iface.log('[SDCrack] Settings successfully changed', 'success')
+                else:
+                    iface.log('[SDCrack] Please use valid numbers', 'error')
+            else:
+                iface.log('[SDCrack] Syntax: sd <time1> <time2>', 'error')
 
     def on_simulation_step(self, iface: TMInterface, _time: int):
         self.race_time = _time
@@ -199,6 +211,13 @@ class MainClient(Client):
         self.prev = None
         self.iterations = 0
 
+def isFloat(value) -> bool:
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+    
 def main():
     server_name = f'TMInterface{sys.argv[1]}' if len(sys.argv) > 1 else 'TMInterface0'
     print(f'Connecting to {server_name}...')
