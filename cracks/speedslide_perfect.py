@@ -46,7 +46,7 @@ class MainClient(Client):
     def on_simulation_begin(self, iface: TMInterface):
         iface.remove_state_validation()
         
-    def on_custom_command(self, iface: TMInterface, command: str, args: list):
+    def on_custom_command(self, iface: TMInterface, time_from: int, time_to: int, command: str, args: list):
         if command == 'sd':
             if len(args) >= 2:
                 if isFloat(args[0]) and isFloat(args[1]):
