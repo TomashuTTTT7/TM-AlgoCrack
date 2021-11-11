@@ -9,9 +9,22 @@ import struct
 class MainClient(Client):
     def __init__(self) -> None:
         super(MainClient, self).__init__()
+        self.mode = 'tmiconsole'
 
     def on_registered(self, iface: TMInterface) -> None:
         print(f'Registered to {iface.server_name}')
+        iface.register_custom_command('sd_quality')
+        
+    def on_custom_command(self, iface: TMInterface, time_from: int, time_to: int, command: str, args: list):
+        if command == 'sd_quality':
+            if len(args) >= 1:
+                if args[0] == 'tmiconsole' or args[0] == 'extconsole':
+                    self.mode=args[0]
+                    iface.log('[SDCrack] Settings successfully changed', 'success')
+                else:
+                    iface.log('[SDCrack] Syntax: sd_quality <tmiconsole/extconsole>', 'error')
+            else:
+                iface.log('[SDCrack] Syntax: sd_quality <tmiconsole/extconsole>', 'error')
 
     def on_run_step(self, iface: TMInterface, _time: int):
         if _time >= 0:
@@ -52,7 +65,10 @@ class MainClient(Client):
 
             quality = speedslide_crack.GetSpeedslideQualityForStadiumCar(speed.x, speed.z)
             if quality > 0.0:
-                print(f"{_time} | {quality}")
+                if self.mode == 'tmiconsole':
+                    iface.log(f"{_time} | {quality}")
+                else:
+                    print(f"{_time} | {quality}")
 
 def main():
     server_name = f'TMInterface{sys.argv[1]}' if len(sys.argv) > 1 else 'TMInterface0'
