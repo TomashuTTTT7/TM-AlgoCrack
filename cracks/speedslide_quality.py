@@ -31,32 +31,28 @@ class MainClient(Client):
             state = iface.get_simulation_state()
 
             wheels_in_air = True
-            wheel_size = tminterface.constants.SIMULATION_WHEELS_SIZE // 4
-            for i in range(4):
-                current_offset = wheel_size * i
-                hasgroundcontact = struct.unpack('i', state.simulation_wheels[current_offset+292:current_offset+296])[0]
-                wheels_in_air &= (hasgroundcontact == 0)
+            for simulation_wheel in state.simulation_wheels:
+                wheels_in_air &= (simulation_wheel.real_time_state.has_ground_contact == 0)
 
             if wheels_in_air:
                 return
 
-            # rotation matrix
-            xx = struct.unpack('f', state.dyna[464:468])[0]
-            xy = struct.unpack('f', state.dyna[468:472])[0]
-            xz = struct.unpack('f', state.dyna[472:476])[0]
+            rotation = state.dyna.current_state.rotation.to_numpy()
+            linear_speed = state.dyna.current_state.linear_speed.to_numpy()
 
-            yx = struct.unpack('f', state.dyna[476:480])[0]
-            yy = struct.unpack('f', state.dyna[480:484])[0]
-            yz = struct.unpack('f', state.dyna[484:488])[0]
+            xx = rotation[0][0]
+            xy = rotation[0][1]
+            xz = rotation[0][2]
+            yx = rotation[1][0]
+            yy = rotation[1][1]
+            yz = rotation[1][2]
+            zx = rotation[2][0]
+            zy = rotation[2][1]
+            zz = rotation[2][2]
 
-            zx = struct.unpack('f', state.dyna[488:492])[0]
-            zy = struct.unpack('f', state.dyna[492:496])[0]
-            zz = struct.unpack('f', state.dyna[496:500])[0]
-
-            # velocity
-            vx = struct.unpack('f', state.dyna[512:516])[0]
-            vy = struct.unpack('f', state.dyna[516:520])[0]
-            vz = struct.unpack('f', state.dyna[520:524])[0]
+            vx = linear_speed[0]
+            vy = linear_speed[1]
+            vz = linear_speed[2]
 
             speed = geom.GmVec3(vx, vy, vz).MultTranspose(geom.GmMat3(xx, xy, xz, yx, yy, yz, zx, zy, zz))
             # speed.x : speed sidewards
