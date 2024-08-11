@@ -2,8 +2,8 @@ PluginInfo@ GetPluginInfo() {
     auto info = PluginInfo();
     info.Name = "Speedslide Script";
     info.Author = "Tomashu";
-    info.Version = "v1.0.0";
-    info.Description = "Shows speedslide quality as a graph";
+    info.Version = "v1.0.1";
+    info.Description = "Shows speedslide quality as a slider";
     return info;
 }
 
@@ -200,20 +200,23 @@ void OnRunStep(SimulationManager@ simManager) {
 bool enabled;
 
 void Render() {
-    if (GetVariableBool("sd_quality_slider") && UI::Begin("SD Quality")) {
+    if (!GetVariableBool("sd_quality_slider"))
+        return;
+
+    if (UI::Begin("SD Quality")) {
         if (valid) {
             if (left) {
-                UI::SliderFloat("", -quality, -2, 0);
+                UI::SliderFloat("quality", -quality, -2, 0);
             } else {
-                UI::SliderFloat("", quality, 0, 2);
+                UI::SliderFloat("quality", quality, 0, 2);
             }
         } else {
             UI::BeginDisabled();
-            UI::SliderFloat("", 0, -2, 2);
+            UI::SliderFloat("quality", 0, -2, 2);
             UI::EndDisabled();
         }
-        UI::End();
     }
+    UI::End();
 }
 
 void Main() {
