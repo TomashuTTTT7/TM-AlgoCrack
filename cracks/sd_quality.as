@@ -2,7 +2,7 @@ PluginInfo@ GetPluginInfo() {
     auto info = PluginInfo();
     info.Name = "Speedslide Script";
     info.Author = "Tomashu";
-    info.Version = "v1.0.1";
+    info.Version = "v1.0.2";
     info.Description = "Shows speedslide quality as a slider";
     return info;
 }
@@ -133,12 +133,23 @@ float GetMinimumSpeedslideAbsoluteLocalSpeedXForStadiumCar(float speed_z, float 
 }
 
 // the closer to 1.0, the better
-float GetSpeedslideQualityForStadiumCar(float speed_x, float speed_z, float material_max_side_friction_multiplier = 1.0) {
+float GetSpeedslideQualityForStadiumCar(float angvel_y, float speed_x, float speed_z, float material_max_side_friction_multiplier = 1.0) {
     float maxsidefriction = MaxSideFrictionFromSpeedForStadiumCar.GetValue(speed_z * 3.6) * material_max_side_friction_multiplier;
-    float sidefriction = 20 * Math::Abs(speed_x);
+
+    speed_x = Math::Abs(speed_x);
+    
+    float sidefriction = 20 * speed_x;
+
+    float delta = Math::Abs(angvel_y) * 29.8759102821;
+
+    if (Math::Abs(sidefriction - delta) < maxsidefriction) {
+        sidefriction += delta;
+    }
+
     if (sidefriction > maxsidefriction) {
         return (sidefriction - maxsidefriction) / maxsidefriction;
     }
+    
     return 0.0;
 }
 
@@ -189,7 +200,8 @@ void OnRunStep(SimulationManager@ simManager) {
     //log("" + material_max_side_friction_multiplier);
 
     vec3 local_speed = MultTranspose(simManager.Dyna.CurrentState.LinearSpeed, simManager.Dyna.CurrentState.Location.Rotation);
-    quality = GetSpeedslideQualityForStadiumCar(local_speed.x, local_speed.z, material_max_side_friction_multiplier);
+    vec3 local_angvel = MultTranspose(simManager.Dyna.CurrentState.AngularSpeed, simManager.Dyna.CurrentState.Location.Rotation);
+    quality = GetSpeedslideQualityForStadiumCar(local_angvel.y, local_speed.x, local_speed.z, material_max_side_friction_multiplier);
     valid = quality > 0;
     left = local_speed.x < 0;
     if (valid && GetVariableBool("sd_quality_print")) {
